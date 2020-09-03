@@ -9,14 +9,14 @@ import java.util.concurrent.locks.ReentrantLock;
 * consumers must wait if the buffer is empty
 */
 public class BoundedBufferMonitor {
-    Object[] shared_buffer;
+    private Object[] shared_buffer;
     // front back allow us to "wrap around" the buffer
     // buf_size is capacity, count is current number of objects on the
     // buffer.
-    int front, back, buf_size, count;
+    private int front, back, buf_size, count;
 
-    ReentrantLock lock = new ReentrantLock();
-    Condition waiting_for_space = lock.newCondition(),
+    private ReentrantLock lock = new ReentrantLock();
+    private Condition waiting_for_space = lock.newCondition(),
         waiting_for_items = lock.newCondition();
 
     /*
