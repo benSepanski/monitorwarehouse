@@ -16,8 +16,8 @@ public class BoundedBufferMonitor {
     private int front, back, buf_size, count;
 
     private ReentrantLock lock = new ReentrantLock();
-    private Condition waiting_for_space = lock.newCondition(),
-        waiting_for_items = lock.newCondition();
+    private Condition space_on_buffer = lock.newCondition(),
+        items_on_buffer = lock.newCondition();
 
     /*
     * Create a buffer size
@@ -31,40 +31,60 @@ public class BoundedBufferMonitor {
     /*
     * Add something to the buffer
     */
-    public void put(Object[] items) throws InterruptedException {
+    public void put(Object[] items) {
         lock.lock();
-        // wait for space to drop in items 
-        // (count is available space, so need count+0, count+1,...
-        //  count+items.length-1, i.e. count+items.length -1<buf_size
-        //  i.e. count+items.length < buf_size+1
-        while(items.length + count > buf_size) waiting_for_space.await();
-        for(int i = 0; i < items.length; i++, back = (back+1) % buf_size) {
-            shared_buffer[back] = items[i];
+        try {
+            // wait for space to drop in items 
+            // (count is available space, so need count+0, count+1,...
+            //  count+items.length-1, i.e. count+items.length -1<buf_size
+            //  i.e. count+items.length < buf_size+1
+            while(items.length + count > buf_size) {
+                try{
+                    space_on_buffer.await();
+                }
+                catch(InterruptedException e) {
+                    throw new RuntimeException();
+                }
+            } 
+            for(int i = 0; i < items.length; i++, back = (back+1) % buf_size) {
+                shared_buffer[back] = items[i];
+            }
+            count += items.length;
+            // now threads waiting for items might want to be notified
+            items_on_buffer.notifyAll();
         }
-        count += items.length;
-        // now threads waiting for items might want to be notified
-        waiting_for_items.notifyAll();
-
-        lock.unlock();
+        finally {
+            lock.unlock();
+        }
     }
 
     /*
      * Take num things off the buffer
      */
-    public Object[] take(int num) throws InterruptedException {
-        lock.lock();
-        // Wait until there are at least *num* items 
-        while(count < num) waiting_for_items.await();
-        // Grab the *num* items off of the array
+    public Object[] take(int num) {
         Object[] items = new Object[num];
-        for(int i = 0; i < num; ++i, front = (front+1) % buf_size) {
-            items[i] = items[front];
+        lock.lock();
+        try {
+            // Wait until there are at least *num* items 
+            while(count < num) {
+                try{
+                    items_on_buffer.await();
+                }
+                catch(InterruptedException e) {
+                    throw new RuntimeException();
+                }
+            } 
+            // Grab the *num* items off of the array
+            for(int i = 0; i < num; ++i, front = (front+1) % buf_size) {
+                items[i] = items[front];
+            }
+            count -= num;
+            // Now wake any threads waiting for space
+            space_on_buffer.notifyAll();
         }
-        count -= num;
-        // Now wake any threads waiting for space
-        waiting_for_space.notifyAll();
-
-        lock.unlock();
+        finally {
+            lock.unlock();
+        }
         return items;
     }
 }
