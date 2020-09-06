@@ -9,7 +9,7 @@ import java.util.concurrent.locks.ReentrantLock;
 * consumers must wait if the buffer is empty
 */
 public class BoundedBufferMonitor {
-    private Object[] shared_buffer;
+    private int[] shared_buffer;
     // front back allow us to "wrap around" the buffer
     // buf_size is capacity, count is current number of objects on the
     // buffer.
@@ -23,7 +23,7 @@ public class BoundedBufferMonitor {
     * Create a buffer size
     */
     public BoundedBufferMonitor(int buf_size) {
-        shared_buffer = new Object[buf_size];
+        shared_buffer = new int [buf_size];
         this.buf_size = buf_size;
         count = front = back = 0;
     }
@@ -31,7 +31,7 @@ public class BoundedBufferMonitor {
     /*
     * Add something to the buffer
     */
-    public void put(Object[] items) {
+    public void put(int[] items) {
         lock.lock();
         try {
             // wait for space to drop in items 
@@ -42,16 +42,14 @@ public class BoundedBufferMonitor {
                 try{
                     space_on_buffer.await();
                 }
-                catch(InterruptedException e) {
-                    throw new RuntimeException();
-                }
+                catch(InterruptedException e) { }
             } 
             for(int i = 0; i < items.length; i++, back = (back+1) % buf_size) {
                 shared_buffer[back] = items[i];
             }
             count += items.length;
             // now threads waiting for items might want to be notified
-            items_on_buffer.notifyAll();
+            items_on_buffer.signalAll();
         }
         finally {
             lock.unlock();
@@ -61,8 +59,8 @@ public class BoundedBufferMonitor {
     /*
      * Take num things off the buffer
      */
-    public Object[] take(int num) {
-        Object[] items = new Object[num];
+    public int[] take(int num) {
+        int[] items = new int[num];
         lock.lock();
         try {
             // Wait until there are at least *num* items 
@@ -70,17 +68,15 @@ public class BoundedBufferMonitor {
                 try{
                     items_on_buffer.await();
                 }
-                catch(InterruptedException e) {
-                    throw new RuntimeException();
-                }
+                catch(InterruptedException e) { }
             } 
             // Grab the *num* items off of the array
             for(int i = 0; i < num; ++i, front = (front+1) % buf_size) {
-                items[i] = items[front];
+                items[i] = shared_buffer[front];
             }
             count -= num;
             // Now wake any threads waiting for space
-            space_on_buffer.notifyAll();
+            space_on_buffer.signalAll();
         }
         finally {
             lock.unlock();
