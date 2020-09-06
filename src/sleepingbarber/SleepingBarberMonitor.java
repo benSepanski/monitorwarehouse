@@ -48,8 +48,8 @@ public class SleepingBarberMonitor {
             // Now I have a customer, take them from waiting room and
             // begin to give them a haircut
             num_free_seats++;
-            barber_cuts_hair.signal();
             barber_cutting_hair = true;
+            barber_cuts_hair.signal();
         }
         finally {
             lock.unlock();
