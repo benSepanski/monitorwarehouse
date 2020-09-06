@@ -88,9 +88,6 @@ class Reader extends Thread {
     /**
      * Just add together all the entries in the resource to test that we gain
      * access, etc.
-     * 
-     * @param num_writes Number of times to read from thread, enters and exits
-     *                  monitor bufer and after each read
      */
     public void run() {
         int total_sum = 0;
@@ -130,9 +127,6 @@ class Writer extends Thread {
 
     /**
      * Increment all the entries in the resource num_writes times
-     * 
-     * @param num_writes Number of times to rite from thread, enters and exits
-     *                  monitor bufer and after each read
      */
     public void run() {
         int total_sum = 0;

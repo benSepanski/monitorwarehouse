@@ -1,4 +1,4 @@
-package monitorwarehouse;
+package boundedbuffer;
 
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;

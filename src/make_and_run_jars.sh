@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-
+ 
 declare -A dir2args=(
-    ["rwlock"]="25 0 100|0 25 100|25 25 1000|5 200 250")
+    ["rwlock"]="25 0 100|0 25 100|25 25 1000|5 200 250"
+    ["boundedbuffer"]="10 3 5 50")
 # Use | as delimiter
 IFS='|' ;
 
