@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
- 
+
+# You've got to run this from inside the src directory
+
 declare -A dir2args=(
+    ["boundedbuffer"]="10 3 2 40|25 5 1 250|10 25 8 500"
     ["rwlock"]="25 0 100|0 25 100|25 25 1000|5 200 250"
-    ["boundedbuffer"]="10 3 2 40|25 5 1 250|10 25 8 500")
+    ["sleepingbarber"]="1 5 5|10 10 50|10 10 50|100 1 50|25 2 10"
+)
 # Use | as delimiter
 IFS='|' ;
 
-for dir in boundedbuffer ; do 
+for dir in */ ; do 
+    # Remove trailing slash because I always forget about it
+    dir=${dir%"/"};
     echo "Compiling java in $dir/";
     find $dir -type f -name "*.java" | xargs javac ;
     echo "Building $dir/$dir.jar" ;

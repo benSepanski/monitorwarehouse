@@ -1,4 +1,4 @@
-package monitorwarehouse;
+package sleepingbarber;
 
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -31,8 +31,12 @@ public class SleepingBarberMonitor {
      * cutting chair until they are awoken. They then
      * take a customer from the waiting room and put them
      * in the cutting chair and become busy (cutting their hair).
+     * 
+     * On an interrupt, throw a runtime error if interrupted with a nonempty waiting room,
+     * otherwise gracefully return without altering state.
+     * Returns true iff was not interrupted.
      */
-    public void cut_hair() {
+    public boolean cut_hair() {
         lock.lock();
         try {
             // While waiting room is empty, wait for a customer to
@@ -41,8 +45,11 @@ public class SleepingBarberMonitor {
                 try{
                     customer_ready.await();
                 }
-                catch(InterruptedException e) {
-                    throw new RuntimeException();
+                catch(InterruptedException e) { 
+                    if(num_free_seats < max_free_seats) {
+                        throw new RuntimeException("Interrupted with customers in waiting room");
+                    }
+                    return false;
                 }
             }
             // Now I have a customer, take them from waiting room and
@@ -54,7 +61,7 @@ public class SleepingBarberMonitor {
         finally {
             lock.unlock();
         }
-
+        return true;
     }
 
     /**
@@ -80,9 +87,7 @@ public class SleepingBarberMonitor {
                         barber_cuts_hair.await();
                     }
                 }
-                catch(InterruptedException e) {
-                    throw new RuntimeException();
-                }
+                catch(InterruptedException e) { }
                 // We got our haircut, let's go
                 barber_cutting_hair = false;
                 got_haircut = true;
