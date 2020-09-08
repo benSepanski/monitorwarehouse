@@ -9,14 +9,13 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class H2OMonitor {
     private ReentrantLock lock = new ReentrantLock();
-    private Condition new_H2O = lock.newCondition(),
-        H2_pair = lock.newCondition(),
-        second_H = lock.newCondition();
-    
-    private int num_free_first_H = 0,
-        num_free_second_H = 0,
-        num_H2_pairs = 0,
-        num_H_in_H2O = 0;
+    private Condition H_bonded = lock.newCondition(),
+        available_H2 = lock.newCondition();
+    private int 
+        num_H = 0,
+        num_H2 = 0,
+        num_H_bonded = 0,
+        num_H2O_bonded = 0;
 
     /**
      * Call to send hydrogen through barrier
@@ -27,44 +26,22 @@ public class H2OMonitor {
     public void enter_hydrogen() {
         lock.lock();
         try {
-            // If there is no first H waiting for me, I am the first H
-            boolean first;
-            if(num_free_first_H == 0) {
-                first = true;
-                num_free_first_H++;
-            } // If there is a first H waiting for me, I am the second H.
-            // That first H is no longer free,
-            else {
-                first = false;
-                num_free_second_H++;
-                num_free_first_H--;
-                second_H.signal();
+            // new H, join to make H2 if possible
+            num_H++;
+            if(num_H == 2) {
+                num_H -= 2;
+                num_H2++;
+                available_H2.signal();
             }
-            // If I am the first H, wait for a second H
-            while(num_free_second_H == 0) {
+            // Wait until bonded with HO
+            while(num_H_bonded < 1) {
                 try {
-                    second_H.await();
+                    H_bonded.await();
                 } catch(InterruptedException e) {}
             }
-            // If I am the first H, mark that I found that second H
-            // (it is no lnger free)
-            // and record that there is a new H2 pair.
-            if(first) {
-                num_free_second_H--;
-                num_H2_pairs++;
-                H2_pair.signal();
-            }
-            // Now wait until H2 is bound with oxygen
-            while(num_H_in_H2O == 0) {
-                try {
-                    new_H2O.await();
-                } catch(InterruptedException e) {}
-            }
-            // That H2O passes out of the barrier
-            num_H_in_H2O--;
-            // If there is another H, signal
-            if((num_H_in_H2O % 2) == 1) {
-                new_H2O.signal();
+            num_H_bonded--;
+            if(num_H_bonded > 0) {
+                H_bonded.signal();
             }
         }
         finally {
@@ -82,19 +59,24 @@ public class H2OMonitor {
     public void enter_oxygen() {
         lock.lock();
         try {
-            // Wait for H^2 to pair with
-            while(num_H2_pairs == 0) {
+            // Wait for H2 to pair with
+            while(num_H2 < 1) {
                 try {
-                    H2_pair.await();
+                    available_H2.await();
                 } catch(InterruptedException e) {}
             }
-            // pair with the H2
-            num_H2_pairs--;
-            num_H_in_H2O += 2;
-            new_H2O.signal();
+            // Use the H2 and bond
+            num_H2--;
+            num_H_bonded += 2;
+            num_H2O_bonded++;
+            H_bonded.signal();
         }
         finally {
             lock.unlock();
         }
+    }
+
+    public int get_num_H2O() {
+        return num_H2O_bonded;
     }
 }
