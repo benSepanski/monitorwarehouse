@@ -5,7 +5,7 @@
 declare -A dir2args=(
     ["boundedbuffer"]="10 3 2 40|25 5 1 250|10 25 8 500"
     ["rwlock"]="25 0 100|0 25 100|25 25 10|5 200 25"
-    ["sleepingbarber"]="1 5 5|10 10 50|10 10 50|100 1 50|25 2 10"
+    ["sleepingbarber"]="2 1|4 1|8 1|16 1|32 1|64 1|8 8|16 8|32 8|64 8|128 8|256 8"
     ["h2o"]="1 1|2 2|4 4|10 1|1 10"
 )
 
@@ -31,7 +31,7 @@ for dir in */ ; do
     # iterate through args
     for args in ${arglist[@]} ; do 
         log_name=$(echo "$args.log" | sed -e 's/ /_/g');
-        nsecs=15;
+        nsecs=30;
         echo "Running $dir/$dir.jar with args $args with timeout of $nsecs seconds to '$dir/logs/$log_name'";
         timeout $nsecs bash -c "echo $args | xargs java -jar \"$dir/$dir.jar\" 2> \"$dir/logs/$log_name\" ";
         if [ $? == 124 ]; then 
