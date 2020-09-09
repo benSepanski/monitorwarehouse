@@ -2,9 +2,7 @@ package boundedbuffer;
 
 import java.lang.Thread;
 import java.util.logging.Logger;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Random;
 import java.util.logging.Level;
 
 
